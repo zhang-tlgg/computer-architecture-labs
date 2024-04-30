@@ -1,0 +1,24 @@
+image: riscv64:alpha
+
+before_script:
+  - rm -rf checkfiles/ || true
+  - rm -rf build/ || true
+  - git clone $TESTCASES
+  - mkdir build && cp tomasulo-simulator-testcases/check_predict.sh build/check_predict.sh && cp tomasulo-simulator-testcases/check_tomasulo.sh build/check_tomasulo.sh
+  - cp -r tomasulo-simulator-testcases/checkfiles ./checkfiles
+  - cd build && cmake -DJUDGE_ONLINE:STRING=true ..
+  - make
+
+after_script:
+  - cd ~/ && rm -rf build
+
+stages:
+  - tomasulo
+
+job 1:
+  stage: tomasulo
+  script:
+    - bash check_tomasulo.sh
+    - bash check_predict.sh
+  tags:
+    - 2024-alpha
