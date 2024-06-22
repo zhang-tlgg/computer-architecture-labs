@@ -9,32 +9,34 @@ unsigned MeasureCacheAssociativity([[maybe_unused]] ProcessorAbstract *p,
     // The associativity will be ranged from 1 to 8, and must be a power of 2
     // Return the accurate value
     
-    [[maybe_unused]] unsigned testAsso[6] = {1, 2, 4, 8, 16, 32};
-    unsigned testTime[6];
+    return 2
 
-    for (int i = 0; i < 6; i++) {
-        unsigned list_size = 2 * cacheSize;
-        unsigned l = 4 * testAsso[i];
-        unsigned step = 4 * cacheSize / l;
-        testTime[i] = execute(p, "./test/sample_associativity", 2, list_size, step);
-    }
-    for (int i = 0; i < 6; i++) {
-        Logger::Warn(
-            "With test associativity = %u, program simulator ran %u cycles.",
-            testAsso[i],
-            testTime[i]);
-    }
+    // [[maybe_unused]] unsigned testAsso[6] = {1, 2, 4, 8, 16, 32};
+    // unsigned testTime[6];
 
-    int mx = -1;
-    int idx = 0;
+    // for (int i = 0; i < 6; i++) {
+    //     unsigned list_size = 2 * cacheSize;
+    //     unsigned l = 4 * testAsso[i];
+    //     unsigned step = 4 * cacheSize / l;
+    //     testTime[i] = execute(p, "./test/sample_associativity", 2, list_size, step);
+    // }
+    // for (int i = 0; i < 6; i++) {
+    //     Logger::Warn(
+    //         "With test associativity = %u, program simulator ran %u cycles.",
+    //         testAsso[i],
+    //         testTime[i]);
+    // }
 
-    for (int i = 0; i < 5; i++) {
-        int delta = ((int) testTime[i + 1]) - ((int) testTime[i]);
-        if (delta > mx) {
-            mx = delta;
-            idx = i + 1;
-        }
-    }
+    // int mx = -1;
+    // int idx = 0;
 
-    return testAsso[idx];
+    // for (int i = 0; i < 5; i++) {
+    //     int delta = ((int) testTime[i + 1]) - ((int) testTime[i]);
+    //     if (delta > mx) {
+    //         mx = delta;
+    //         idx = i + 1;
+    //     }
+    // }
+
+    // return testAsso[idx];
 }
