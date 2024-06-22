@@ -116,8 +116,7 @@ bool ReorderBuffer::checkReady(unsigned addr) const {
 
 void ReorderBuffer::showContent() {
 	std::stringstream ss;
-	Logger::setDebugOutput(true);
-	Logger::Debug("ROB: ");
+	// Logger::setDebugOutput(true);
     unsigned p = popPtr;
     while (p != pushPtr) {
         ROBEntry slot = buffer[p];
@@ -127,5 +126,5 @@ void ReorderBuffer::showContent() {
         if (p == ROB_SIZE)
             p = 0;
     }
-	Logger::Debug("%s", ss.str().c_str());
+	Logger::Debug("ROB: %s", ss.str().c_str());
 }

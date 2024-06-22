@@ -257,10 +257,9 @@ void ReservationStation<size>::flush() {
 template <unsigned size>
 void ReservationStation<size>::showContent() {
 	std::stringstream ss;
-	Logger::setDebugOutput(true);
-	Logger::Debug("Reservation Station: ");
+	// Logger::setDebugOutput(true);
     for (IssueSlot &slot : buffer) {
         ss << slot.busy << " " << slot.inst << " | " << slot.readPort1.waitForWakeup << " "  << slot.readPort2.waitForWakeup << " " << slot.readPort1.robIdx << " " << slot.readPort2.robIdx  << "\n";
     }
-	Logger::Debug("%s", ss.str().c_str());
+	Logger::Debug("Reservation Station: %s", ss.str().c_str());
 }

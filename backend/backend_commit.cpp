@@ -20,24 +20,20 @@ bool Backend::dispatchInstruction([[maybe_unused]] const Instruction &inst) {
 	// 6.插入成功返回 true, 失败返回 false, 请保证返回 false 时没有副作用
     // NOTE: use getFUType to get instruction's target FU
     // NOTE: FUType::NONE only goes into ROB but not Reservation Stations
-    if (!rob.canPush()) {
-		Logger::Info("ROB is full");
-		return false;
-	}
 	Logger::setDebugOutput(true);
 	std::stringstream ss;
 	ss << inst;
 	Logger::Debug("[Back::Insert] %s at pc = %x", ss.str().c_str(), inst.pc);
 	
 	if (!rob.canPush()) {
-		Logger::Info("ROB can not push.");
+		Logger::Debug("ROB can not push.");
 		return false;
 	}
 	switch (getFUType(inst))
 	{
 	case FUType::ALU: {
 		if (!rsALU.hasEmptySlot()) {
-			Logger::Info("rsALU is full.");
+			Logger::Debug("rsALU is full.");
 			// rsALU.showContent();
 			return false;
 		}
@@ -49,7 +45,7 @@ bool Backend::dispatchInstruction([[maybe_unused]] const Instruction &inst) {
 	}
 	case FUType::BRU: {
 		if (!rsBRU.hasEmptySlot()) {
-			Logger::Info("rsBRU is full.");
+			Logger::Debug("rsBRU is full.");
 			return false;
 		}
 		unsigned int robIdx = rob.push(inst, false);
@@ -60,7 +56,7 @@ bool Backend::dispatchInstruction([[maybe_unused]] const Instruction &inst) {
 	}
 	case FUType::DIV: {
 		if (!rsDIV.hasEmptySlot()) {
-			Logger::Info("rsDIV is full.");
+			Logger::Debug("rsDIV is full.");
 			return false;
 		}
 		unsigned int robIdx = rob.push(inst, false);
@@ -79,7 +75,7 @@ bool Backend::dispatchInstruction([[maybe_unused]] const Instruction &inst) {
 	}
 	case FUType::LSU: {
 		if (!rsLSU.hasEmptySlot()) {
-			Logger::Info("rsLSU is full.");
+			Logger::Debug("rsLSU is full.");
 			// rsLSU.showContent();
 			return false;
 		}
