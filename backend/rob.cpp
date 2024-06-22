@@ -126,5 +126,5 @@ void ReorderBuffer::showContent() {
         if (p == ROB_SIZE)
             p = 0;
     }
-	Logger::Debug("ROB: %s", ss.str().c_str());
+	Logger::Debug("ROB: \n%s", ss.str().c_str());
 }

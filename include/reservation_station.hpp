@@ -224,6 +224,13 @@ IssueSlot ReservationStation<size>::issue() {
 		for (unsigned i = k; i < size - 1; i++) {
 			buffer[i] = buffer[i+1];
 		}
+		buffer[size - 1] = entry;
+		buffer[size - 1].busy = false;
+
+		// Logger::setDebugOutput(true);
+		// std::stringstream ss;
+		// ss << entry.inst;
+		// Logger::Debug("[RS::Issue] %s", ss.str().c_str());
 		// showContent();
 		return entry;
 	}
@@ -241,6 +248,13 @@ IssueSlot ReservationStation<size>::issue() {
 		for (unsigned i = k; i < size - 1; i++) {
 			buffer[i] = buffer[i+1];
 		}
+		buffer[size - 1] = entry;
+		buffer[size - 1].busy = false;
+		
+		// Logger::setDebugOutput(true);
+		// std::stringstream ss;
+		// ss << entry.inst;
+		// Logger::Debug("[RS::Issue] %s", ss.str().c_str());
 		// showContent();
 		return entry;
 	}
@@ -261,5 +275,5 @@ void ReservationStation<size>::showContent() {
     for (IssueSlot &slot : buffer) {
         ss << slot.busy << " " << slot.inst << " | " << slot.readPort1.waitForWakeup << " "  << slot.readPort2.waitForWakeup << " " << slot.readPort1.robIdx << " " << slot.readPort2.robIdx  << "\n";
     }
-	Logger::Debug("Reservation Station: %s", ss.str().c_str());
+	Logger::Debug("Reservation Station: \n%s", ss.str().c_str());
 }

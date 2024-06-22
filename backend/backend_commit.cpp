@@ -20,10 +20,10 @@ bool Backend::dispatchInstruction([[maybe_unused]] const Instruction &inst) {
 	// 6.插入成功返回 true, 失败返回 false, 请保证返回 false 时没有副作用
     // NOTE: use getFUType to get instruction's target FU
     // NOTE: FUType::NONE only goes into ROB but not Reservation Stations
-	Logger::setDebugOutput(true);
+	Logger::setDebugOutput(false);
 	std::stringstream ss;
 	ss << inst;
-	Logger::Debug("[Back::Insert] %s at pc = %x", ss.str().c_str(), inst.pc);
+	Logger::Debug("[Back::Dispatch] %s at pc = %x", ss.str().c_str(), inst.pc);
 	
 	if (!rob.canPush()) {
 		Logger::Debug("ROB can not push.");
@@ -129,10 +129,11 @@ bool Backend::commitInstruction([[maybe_unused]] const ROBEntry &entry,
     // buffer.
     // NOTE: Be careful about flush!
     // Optional TODO: Update your BTB when necessary
-	Logger::setDebugOutput(true);
+	Logger::setDebugOutput(false);
 	std::stringstream ss;
     ss << entry.inst;
-	Logger::Debug("[Back::Commit] entry %d: %s.", rob.getPopPtr(), ss.str().c_str());
+	// Logger::Debug("[Back::Commit] entry %d: %s.", rob.getPopPtr(), ss.str().c_str());
+	// Logger::Debug("%x  %s", entry.inst.pc, ss.str().c_str());
 
 	if (!entry.state.ready) {
 		Logger::Error("Can not commit unready instruction");
@@ -141,11 +142,12 @@ bool Backend::commitInstruction([[maybe_unused]] const ROBEntry &entry,
 
 	if (entry.inst == EXTRA::EXIT){
 		Logger::Debug("Exit");
+		Logger::Info("Exit");
 		return true;
 	}
 	
 	if (entry.state.mispredict) {
-		Logger::Debug("jump to %d.", entry.state.jumpTarget);
+		// Logger::Debug("Jump to %x.", entry.state.jumpTarget);
 		if (entry.inst == RV32I::JAL || entry.inst == RV32I::JALR) {
 			if (!rob.canPop()) {
 				Logger::Error("Can not pop from empty ROB!");
@@ -153,7 +155,7 @@ bool Backend::commitInstruction([[maybe_unused]] const ROBEntry &entry,
 				    "Can not pop from empty ROB!");
 			}
 			regFile->write(entry.inst.getRd(), entry.state.result, rob.getPopPtr());
-			Logger::Debug("Return addr = %x, Param a0 = %d", regFile->read(1), regFile->read(10));
+			// Logger::Debug("Return addr = %x, Param a0 = %d", regFile->read(1), regFile->read(10));
 		}
 		frontend.jump(entry.state.jumpTarget);
 		flush();
@@ -172,8 +174,8 @@ bool Backend::commitInstruction([[maybe_unused]] const ROBEntry &entry,
 			unsigned rd = entry.inst.getRd();
 			regFile->write(rd, entry.state.result, rob.getPopPtr());
 			rob.pop();
-			if (entry.inst.type != InstructionType::B)
-				Logger::Debug("Reg[%d] := %d = 0x%x", rd, entry.state.result, entry.state.result);
+			// if (entry.inst.type != InstructionType::B)
+			// 	Logger::Debug("Reg[%d] := %u = 0x%x", rd, entry.state.result, entry.state.result);
 			break;
 		}
 		case FUType::LSU:
@@ -183,7 +185,7 @@ bool Backend::commitInstruction([[maybe_unused]] const ROBEntry &entry,
 				// Load 
                 LoadBufferSlot ldSlot = loadBuffer.pop(rob.getPopPtr());
                 if (ldSlot.invalidate) {
-					Logger::Debug("load invalidate: jump to %x", entry.inst.pc);
+					// Logger::Debug("load invalidate: jump to %x", entry.inst.pc);
 					frontend.jump(entry.inst.pc);
 					flush();
                 }
@@ -191,17 +193,23 @@ bool Backend::commitInstruction([[maybe_unused]] const ROBEntry &entry,
                     unsigned rd = entry.inst.getRd();
                     regFile->write(rd, entry.state.result, rob.getPopPtr());
                     rob.pop();
-					Logger::Debug("Reg[%d] := %d = 0x%x", rd, entry.state.result, entry.state.result);
+					// Logger::Debug("Reg[%d] := %u = 0x%x", rd, entry.state.result, entry.state.result);
                 }
 			}
 			else if (entry.inst == RV32I::SB || entry.inst == RV32I::SH || entry.inst == RV32I::SW) { 
 				// Store
                 StoreBufferSlot stSlot = storeBuffer.front();
-				Logger::Debug("Mem[%x] := %d", stSlot.storeAddress, stSlot.storeData);
                 bool status = writeMemoryHierarchy(stSlot.storeAddress, stSlot.storeData, 0xF);
                 if (!status) {
                     return false;
                 } else {
+					if (stSlot.storeAddress >= 0x80400000 && stSlot.storeAddress <= 0x804001a8){
+						Logger::Debug("Mem[%x] := %u", stSlot.storeAddress, stSlot.storeData);
+						// for (int i = 0; i <256; i++){
+						// 	memory
+						// 	stSlot.storeAddress - 0x80400000u
+						// }
+					}
                     storeBuffer.pop();
 					rob.pop();
                 }
@@ -227,7 +235,7 @@ bool Backend::commitInstruction([[maybe_unused]] const ROBEntry &entry,
 			break;
 		}
 		}
-		rob.showContent();
+		// rob.showContent();
 		return false;
 	}
 	else {
