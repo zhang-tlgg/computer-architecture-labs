@@ -1,7 +1,7 @@
 constexpr unsigned ARRAY_SIZE = (1u << 20u);  // 1 MB
 char arr[ARRAY_SIZE];
 
-constexpr int totalTime = 5000;
+constexpr int totalTime = 2000;
 
 int main(int argc, char **argv) {
     auto totalSize = ((unsigned) argv[0]);
