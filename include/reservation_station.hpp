@@ -24,6 +24,7 @@ public:
     [[nodiscard]] bool canIssue() const;
     IssueSlot issue();
     void flush();
+	void showContent();
 };
 
 template <unsigned size>
@@ -87,4 +88,15 @@ void ReservationStation<size>::flush() {
     for (auto &slot : buffer) {
         slot.busy = false;
     }
+}
+
+template <unsigned size>
+void ReservationStation<size>::showContent() {
+	std::stringstream ss;
+	Logger::setDebugOutput(true);
+	Logger::Debug("Instructions in Reservation Station: ");
+    for (auto &slot : buffer) {
+        ss << slot.inst << "\n";
+    }
+	Logger::Debug("%s", ss.str().c_str());
 }
