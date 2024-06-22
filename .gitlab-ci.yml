@@ -13,12 +13,11 @@ after_script:
   - cd ~/ && rm -rf build
 
 stages:
-  - tomasulo
+  - cache
 
 job 1:
-  stage: tomasulo
+  stage: cache
   script:
-    - bash check_tomasulo.sh
-    - bash check_predict.sh
+    - ./cache_checker -f ../checkfiles/cache_spec.chk
   tags:
     - 2024-alpha
