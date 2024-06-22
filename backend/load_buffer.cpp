@@ -61,17 +61,19 @@ void LoadBuffer::check([[maybe_unused]] unsigned addr,
                        [[maybe_unused]] unsigned robIdx,
                        [[maybe_unused]] unsigned robPopPtr) {
     // TODO: 完成 Load Buffer 的检验逻辑，寻找顺序错误的 load 指令
-    // throw std::runtime_error("Load Buffer Check not implemented");
+    // 按照规则查询顺序在该 Store 指令之后，但已经完成推测执行的 Load 指令。
+    // 将这些 load 指令的 load buffer 表项设置为 invalid。
 
     for (auto &slot : buffer) {
         unsigned load_robIdx = slot.robIdx;
+        // "已经完成推测执行"怎么判断？下面逻辑正确吗？
         if(
             (load_robIdx > robIdx && robIdx >= robPopPtr) || 
             (load_robIdx < robPopPtr && robIdx >= robPopPtr) ||
             (load_robIdx > robIdx && load_robIdx < robPopPtr)
         ) {
+            // “将 load buffer 表项设置为 invalid” 是不是指 slot.invalidate
             slot.invalidate = true;
-            // slot.valid = false;
         }
     }
 }

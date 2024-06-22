@@ -1,6 +1,7 @@
 #include "rob.h"
 
 #include <stdexcept>
+#include <sstream>
 
 #include "logger.h"
 
@@ -111,4 +112,20 @@ unsigned ReorderBuffer::read(unsigned addr) const {
 
 bool ReorderBuffer::checkReady(unsigned addr) const {
     return buffer[addr].state.ready;
+}
+
+void ReorderBuffer::showContent() {
+	std::stringstream ss;
+	Logger::setDebugOutput(true);
+	Logger::Debug("ROB: ");
+    unsigned p = popPtr;
+    while (p != pushPtr) {
+        ROBEntry slot = buffer[p];
+        ss << slot.inst << " " << slot.valid << "\n";
+
+        p++;
+        if (p == ROB_SIZE)
+            p = 0;
+    }
+	Logger::Debug("%s", ss.str().c_str());
 }

@@ -79,23 +79,29 @@ std::optional<unsigned> StoreBuffer::query([[maybe_unused]] unsigned addr,
                                            [[maybe_unused]] unsigned robIdx,
                                            [[maybe_unused]] unsigned robPopPtr) {
     // TODO: 完成 Store Buffer 的查询逻辑
+    // 按照地址和顺序查询 store buffer 中“最新”的内容，命中时返回对应数值
     unsigned p = pushPtr - 1;
     if (pushPtr == 0) {
         p += ROB_SIZE;
     }
-    while (p != popPtr) {
-        if (buffer[p].valid &&
-            (buffer[p].storeAddress & 0xFFFFFFFCu) == (addr & 0xFFFFFFFCu)) {
+
+    do
+    {
+        unsigned p_robIdx = buffer[p].robIdx;
+        if(buffer[p].valid &&
+            ((p_robIdx < robIdx && p_robIdx >= robPopPtr) || 
+            (robIdx < robPopPtr && p_robIdx >= robPopPtr) ||
+            (p_robIdx < robIdx && robIdx < robPopPtr)) &&
+            buffer[p].storeAddress == addr
+        ) {
             return std::make_optional(buffer[p].storeData);
         }
+
         if (p == 0) {
             p += ROB_SIZE;
         }
         p--;
-    }
-    if (buffer[p].valid &&
-        (buffer[p].storeAddress & 0xFFFFFFFCu) == (addr & 0xFFFFFFFCu)) {
-        return std::make_optional(buffer[p].storeData);
-    }
+    } while (p != popPtr - 1);
+    
     return std::nullopt;
 }

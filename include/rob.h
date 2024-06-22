@@ -44,4 +44,5 @@ public:
     [[nodiscard]] unsigned getPopPtr() const;
     [[nodiscard]] unsigned read(unsigned addr) const;
     [[nodiscard]] bool checkReady(unsigned addr) const;
+	void showContent();
 };

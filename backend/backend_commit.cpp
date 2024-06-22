@@ -11,7 +11,6 @@
  * @return false 后端拒绝该指令
  */
 bool Backend::dispatchInstruction([[maybe_unused]] const Instruction &inst) {
-    if (!rob.canPush()) return false;
     // TODO: Check rob and reservation station is available for push.
 	// 1.检查 ROB 是否已满
 	// 2.检查对应的保留站是否已满
@@ -21,10 +20,13 @@ bool Backend::dispatchInstruction([[maybe_unused]] const Instruction &inst) {
 	// 6.插入成功返回 true, 失败返回 false, 请保证返回 false 时没有副作用
     // NOTE: use getFUType to get instruction's target FU
     // NOTE: FUType::NONE only goes into ROB but not Reservation Stations
-    
+    if (!rob.canPush()) {
+		Logger::Info("ROB is full");
+		return false;
+	}
 	std::stringstream ss;
 	ss << inst;
-	Logger::Debug("Instruct %s at pc = %x", ss.str().c_str(), inst.pc);
+	Logger::Debug("[Back::Insert] %s at pc = %x", ss.str().c_str(), inst.pc);
 	
 	if (!rob.canPush()) {
 		Logger::Info("ROB can not push.");
@@ -35,12 +37,13 @@ bool Backend::dispatchInstruction([[maybe_unused]] const Instruction &inst) {
 	case FUType::ALU: {
 		if (!rsALU.hasEmptySlot()) {
 			Logger::Info("rsALU is full.");
-			rsALU.showContent();
+			// rsALU.showContent();
 			return false;
 		}
 		unsigned int robIdx = rob.push(inst, false);
 		rsALU.insertInstruction(inst, robIdx, regFile, rob);
 		regFile->markBusy(inst.getRd(), robIdx);
+		rob.showContent();
 		return true;
 	}
 	case FUType::BRU: {
@@ -51,6 +54,7 @@ bool Backend::dispatchInstruction([[maybe_unused]] const Instruction &inst) {
 		unsigned int robIdx = rob.push(inst, false);
 		rsBRU.insertInstruction(inst, robIdx, regFile, rob);
 		regFile->markBusy(inst.getRd(), robIdx);
+		rob.showContent();
 		return true;
 	}
 	case FUType::DIV: {
@@ -61,6 +65,7 @@ bool Backend::dispatchInstruction([[maybe_unused]] const Instruction &inst) {
 		unsigned int robIdx = rob.push(inst, false);
 		rsDIV.insertInstruction(inst, robIdx, regFile, rob);
 		regFile->markBusy(inst.getRd(), robIdx);
+		rob.showContent();
 		return true;
 	}
 	case FUType::MUL: {
@@ -68,22 +73,25 @@ bool Backend::dispatchInstruction([[maybe_unused]] const Instruction &inst) {
 		unsigned int robIdx = rob.push(inst, false);
 		rsMUL.insertInstruction(inst, robIdx, regFile, rob);
 		regFile->markBusy(inst.getRd(), robIdx);
+		rob.showContent();
 		return true;
 	}
 	case FUType::LSU: {
 		if (!rsLSU.hasEmptySlot()) {
 			Logger::Info("rsLSU is full.");
-			rsLSU.showContent();
+			// rsLSU.showContent();
 			return false;
 		}
 		unsigned int robIdx = rob.push(inst, false);
 		rsLSU.insertInstruction(inst, robIdx, regFile, rob);
 		regFile->markBusy(inst.getRd(), robIdx);
+		rob.showContent();
 		return true;
 	}
 	case FUType::NONE: {
 		unsigned int robIdx = rob.push(inst, true);
 		regFile->markBusy(inst.getRd(), robIdx);
+		rob.showContent();
 		return true;
 	}
 	
@@ -118,6 +126,7 @@ bool Backend::commitInstruction([[maybe_unused]] const ROBEntry &entry,
 	// 4.若 mispredict，跳转，清空
 	// 5.若提交 Exit，返回 true，否则返回 false
     // Set executeExit when committing EXTRA::EXIT
+
     // NOTE: Be careful about Store Buffer!
     // NOTE: Re-executing load instructions when it is invalidated in load
     // buffer.
@@ -125,7 +134,7 @@ bool Backend::commitInstruction([[maybe_unused]] const ROBEntry &entry,
     // Optional TODO: Update your BTB when necessary
 	std::stringstream ss;
     ss << entry.inst;
-	Logger::Debug("Commit entry %d: %s.", rob.getPopPtr(), ss.str().c_str());
+	Logger::Debug("[Back::Commit] entry %d: %s.", rob.getPopPtr(), ss.str().c_str());
 
 	if (!entry.state.ready) {
 		Logger::Error("Can not commit unready instruction");
@@ -172,6 +181,17 @@ bool Backend::commitInstruction([[maybe_unused]] const ROBEntry &entry,
 		{	
 		 	if (entry.inst == RV32I::LB || entry.inst == RV32I::LH || entry.inst == RV32I::LHU || 
 				entry.inst == RV32I::LW || entry.inst == RV32I::LBU) { // Load 
+
+                LoadBufferSlot ldSlot = loadBuffer.pop(rob.getPopPtr());
+				if (ldSlot.invalidate) {
+					unsigned rd = entry.inst.getRd();
+					Logger::Debug("invalidate: Reg[%d] := %d = 0x%x", rd, entry.state.result, entry.state.result);
+
+                    // Instruction inst = entry.inst;
+                    // rob.pop();
+					// // 是这样吗？
+                    // dispatchInstruction(inst);
+                }
 				unsigned rd = entry.inst.getRd();
 				regFile->write(rd, entry.state.result, rob.getPopPtr());
 				Logger::Debug("Reg[%d] := %d = 0x%x", rd, entry.state.result, entry.state.result);
@@ -213,8 +233,8 @@ bool Backend::commitInstruction([[maybe_unused]] const ROBEntry &entry,
 				"Committing unknown instruction!");
 			break;
 		}
-
 		}
+		rob.showContent();
 		return false;
 	}
 	else {

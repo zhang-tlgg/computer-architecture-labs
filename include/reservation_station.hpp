@@ -50,13 +50,17 @@ void ReservationStation<size>::insertInstruction(
     for (auto &slot : buffer) {
         if (slot.busy) continue;
         // TODO: Dispatch instruction to this slot
+        // 1.若有 slot 空闲，执行插入
+        // 2.插入时，设置两个寄存器读取端口是否已经唤醒，以及对应值，必要时从 ROB 中读取。
+        // 3.寄存器设置 busy
+        // 4.slot busy，返回
         std::stringstream ss;
 		ss << inst;
 		Logger::setDebugOutput(true);
 		slot.inst = inst;
     	slot.robIdx = robIdx;
     	slot.busy = true;
-		Logger::Debug("RS::insertInstruction %s, robIdx = %d", ss.str().c_str(), robIdx);
+		Logger::Debug("[RS::Insert] %s, robIdx = %d", ss.str().c_str(), robIdx);
 		unsigned rs1 = inst.getRs1();
 		unsigned robIdx1 = regFile->getBusyIndex(rs1);
 		if (regFile->isBusy(rs1)) {
@@ -99,6 +103,7 @@ void ReservationStation<size>::insertInstruction(
 			slot.readPort2.value = regFile->read(rs2);
 			// regFile->markBusy(rs2);
 		}
+        showContent();
 		return;
         Logger::Error("Dispatching instruction is not implemented");
         std::__throw_runtime_error(
@@ -114,8 +119,11 @@ template <unsigned size>
 void ReservationStation<size>::wakeup(
     [[maybe_unused]] const ROBStatusWritePort &x) {
     // TODO: Wakeup instructions according to ROB Write
+    // 1.查看每个 slot 的寄存器读取端口是否已经唤醒
+    // 2.如果未唤醒，比对信息，尝试唤醒指令
     std::stringstream ss;
-	Logger::setDebugOutput(true);	
+	Logger::setDebugOutput(true);
+    Logger::Info("wake up from robIdx = %s", x.robIdx);
 	for (auto &slot : buffer) {
 		if (slot.busy) {
 			if (slot.readPort1.waitForWakeup 
@@ -123,24 +131,25 @@ void ReservationStation<size>::wakeup(
 				slot.readPort1.value = x.result;
 				slot.readPort1.waitForWakeup = false;
 				ss << slot.inst;
-				// Logger::Debug("RS wake up rs1 of %s", ss.str().c_str());
+				Logger::Debug("RS wake up rs1 of %s", ss.str().c_str());
 			}
 			if (slot.readPort2.waitForWakeup 
 			 && x.robIdx == slot.readPort2.robIdx) {
 				slot.readPort2.value = x.result;
 				slot.readPort2.waitForWakeup = false;
 				ss << slot.inst;
-				// Logger::Debug("RS wake up rs2 of %s", ss.str().c_str());
+				Logger::Debug("RS wake up rs2 of %s", ss.str().c_str());
 			}
 		}
 	}
-    // Logger::Error("Wakeup not implemented");
-    // std::__throw_runtime_error("Wakeup not implemented");
+    showContent();
 }
 
 template <unsigned size>
 bool ReservationStation<size>::canIssue() const {
     // TODO: Decide whether an issueSlot is ready to issue.
+    // 检查是否有已经唤醒的指令
+    // 注意 Store 指令需要按序发射
     // Warning: Store instructions must be issued in order!!
     for (auto &slot : buffer) {
 		if (slot.busy && !slot.readPort1.waitForWakeup && !slot.readPort2.waitForWakeup) {
@@ -153,22 +162,35 @@ bool ReservationStation<size>::canIssue() const {
 template <unsigned size>
 IssueSlot ReservationStation<size>::issue() {
     // TODO: Issue a ready issue slot and remove it from reservation station.
+    // 弹出一条完成唤醒的指令，返回发射槽
+    // 你需要返回一条 busy 的发射槽！
+    // 注意 Store 指令需要按序发射
     // Warning: Store instructions must be issued in order!!
     IssueSlot result;
-	for (auto &slot : buffer) {
+    unsigned k = 0;
+	for (k = 0; k < size; k++) {
+		IssueSlot slot = buffer[k];
 		if (slot.busy && !slot.readPort1.waitForWakeup && !slot.readPort2.waitForWakeup) {
 			result = slot;
 			slot.busy = false;
-			std::stringstream ss;
-            ss << slot.inst;
-			Logger::setDebugOutput(true);
-			// Logger::Debug("RS::issue %s", ss.str().c_str());
-			return result;
+			break;
 		}
 	}
-    Logger::Error("No available slots for issuing");
-    std::__throw_runtime_error("No available slots for issuing");
+
+    std::stringstream ss;
+    ss << result.inst;
+    Logger::setDebugOutput(true);
+    Logger::Debug("[RS::issue] %s", ss.str().c_str());
+    
+    for (unsigned i = k; i < size - 1; i++) {
+        buffer[i] = buffer[i+1];
+    }
+
+    showContent();
+    
+    return result;
 }
+
 
 template <unsigned size>
 void ReservationStation<size>::flush() {
@@ -181,9 +203,9 @@ template <unsigned size>
 void ReservationStation<size>::showContent() {
 	std::stringstream ss;
 	Logger::setDebugOutput(true);
-	Logger::Debug("Instructions in Reservation Station: ");
-    for (auto &slot : buffer) {
-        ss << slot.inst << "\n";
+	Logger::Debug("Reservation Station: ");
+    for (IssueSlot &slot : buffer) {
+        ss << slot.busy << " " << slot.inst << slot.readPort1.robIdx << slot.readPort2.robIdx << slot.readPort1.waitForWakeup << slot.readPort2.waitForWakeup << "\n";
     }
 	Logger::Debug("%s", ss.str().c_str());
 }
