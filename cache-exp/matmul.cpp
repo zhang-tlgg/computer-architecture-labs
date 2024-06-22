@@ -46,12 +46,12 @@ bool MeasureMatmulWithCache(ProcessorWithCache *p) {
     double afterOpt = 1.0 * totalCacheHitTime[0] / totalMemoryTime[0];
 
     Logger::Warn(
-        "Before optimization, cache hit rate = %.3lf",
-        beforeOpt);
+        "Before optimization, cache hit rate = %.3lf, finished in %u cycles",
+        beforeOpt, testTime[1]);
     Logger::Warn(
-        "After optimization, cache hit rate = %.3lf",
-        afterOpt);
+        "After optimization, cache hit rate = %.3lf, finished in %u cycles",
+        afterOpt, testTime[0]);
     
-    return afterOpt > 0.91 - eps;
+    return afterOpt > 0.91 - eps && testTime[0] < 1.2 * testTime[1];
 
 }
