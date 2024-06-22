@@ -178,10 +178,15 @@ bool Backend::commitInstruction([[maybe_unused]] const ROBEntry &entry,
 				rob.pop();
 			}
 			else if (entry.inst == RV32I::SB || entry.inst == RV32I::SH || entry.inst == RV32I::SW) { // Store
-				StoreBufferSlot result = storeBuffer.pop();
-				write(result.storeAddress, result.storeData);
-				Logger::Debug("Mem[%x] := %d", result.storeAddress, result.storeData);
-				rob.pop();
+				StoreBufferSlot stSlot = storeBuffer.front();
+				bool status =
+					writeMemoryHierarchy(stSlot.storeAddress, stSlot.storeData, 0xF);
+				if (!status) {
+					return false;
+				} else {
+					storeBuffer.pop();
+				}
+				Logger::Debug("Mem[%x] := %d", stSlot.storeAddress, stSlot.storeData);
 			}
 			else {
 				Logger::Error("Committing unknown instruction! FUType = LSU, InstType != Load/Store.");

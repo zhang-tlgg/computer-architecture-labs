@@ -79,5 +79,23 @@ std::optional<unsigned> StoreBuffer::query([[maybe_unused]] unsigned addr,
                                            [[maybe_unused]] unsigned robIdx,
                                            [[maybe_unused]] unsigned robPopPtr) {
     // TODO: 完成 Store Buffer 的查询逻辑
-    throw std::runtime_error("Store Buffer query not implemented.");
+    unsigned p = pushPtr - 1;
+    if (pushPtr == 0) {
+        p += ROB_SIZE;
+    }
+    while (p != popPtr) {
+        if (buffer[p].valid &&
+            (buffer[p].storeAddress & 0xFFFFFFFCu) == (addr & 0xFFFFFFFCu)) {
+            return std::make_optional(buffer[p].storeData);
+        }
+        if (p == 0) {
+            p += ROB_SIZE;
+        }
+        p--;
+    }
+    if (buffer[p].valid &&
+        (buffer[p].storeAddress & 0xFFFFFFFCu) == (addr & 0xFFFFFFFCu)) {
+        return std::make_optional(buffer[p].storeData);
+    }
+    return std::nullopt;
 }
