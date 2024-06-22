@@ -54,9 +54,9 @@ void ReservationStation<size>::insertInstruction(
         // 2.插入时，设置两个寄存器读取端口是否已经唤醒，以及对应值，必要时从 ROB 中读取。
         // 3.寄存器设置 busy
         // 4.slot busy，返回
+		Logger::setDebugOutput(false);
         std::stringstream ss;
 		ss << inst;
-		Logger::setDebugOutput(true);
 		slot.inst = inst;
     	slot.robIdx = robIdx;
     	slot.busy = true;
@@ -103,7 +103,7 @@ void ReservationStation<size>::insertInstruction(
 			slot.readPort2.value = regFile->read(rs2);
 			// regFile->markBusy(rs2);
 		}
-        showContent();
+        // showContent();
 		return;
         Logger::Error("Dispatching instruction is not implemented");
         std::__throw_runtime_error(
@@ -121,9 +121,10 @@ void ReservationStation<size>::wakeup(
     // TODO: Wakeup instructions according to ROB Write
     // 1.查看每个 slot 的寄存器读取端口是否已经唤醒
     // 2.如果未唤醒，比对信息，尝试唤醒指令
+	Logger::setDebugOutput(false);
     std::stringstream ss;
-	Logger::setDebugOutput(true);
     Logger::Info("wake up from robIdx = %s", x.robIdx);
+	bool flag = false;
 	for (auto &slot : buffer) {
 		if (slot.busy) {
 			if (slot.readPort1.waitForWakeup 
@@ -132,6 +133,7 @@ void ReservationStation<size>::wakeup(
 				slot.readPort1.waitForWakeup = false;
 				ss << slot.inst;
 				Logger::Debug("RS wake up rs1 of %s", ss.str().c_str());
+				flag = true;
 			}
 			if (slot.readPort2.waitForWakeup 
 			 && x.robIdx == slot.readPort2.robIdx) {
@@ -139,10 +141,13 @@ void ReservationStation<size>::wakeup(
 				slot.readPort2.waitForWakeup = false;
 				ss << slot.inst;
 				Logger::Debug("RS wake up rs2 of %s", ss.str().c_str());
+				flag = true;
 			}
 		}
 	}
-    showContent();
+    if (flag)
+        showContent();
+
 }
 
 template <unsigned size>
@@ -151,12 +156,35 @@ bool ReservationStation<size>::canIssue() const {
     // 检查是否有已经唤醒的指令
     // 注意 Store 指令需要按序发射
     // Warning: Store instructions must be issued in order!!
-    for (auto &slot : buffer) {
-		if (slot.busy && !slot.readPort1.waitForWakeup && !slot.readPort2.waitForWakeup) {
-			return true;
+    bool is_LSU = buffer[0].busy && getFUType(buffer[0].inst) == FUType::LSU;
+	if(is_LSU) {
+		bool first_store = false;
+		for (auto &slot : buffer) {
+			Instruction inst = slot.inst;
+			bool is_load = inst == RV32I::LB || inst == RV32I::LH || inst == RV32I::LHU || inst == RV32I::LW || inst == RV32I::LBU;
+			if (is_load) {
+				if (slot.busy && !slot.readPort1.waitForWakeup && !slot.readPort2.waitForWakeup) {
+					return true;
+				}
+			}
+			else {
+				if (first_store == false) {
+					first_store = true;
+					if (slot.busy && !slot.readPort1.waitForWakeup && !slot.readPort2.waitForWakeup) {
+						return true;
+					}
+				}
+			}
 		}
 	}
-    return false;
+	else {
+		for (auto &slot : buffer) {
+			if (slot.busy && !slot.readPort1.waitForWakeup && !slot.readPort2.waitForWakeup) {
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 template <unsigned size>
@@ -166,29 +194,56 @@ IssueSlot ReservationStation<size>::issue() {
     // 你需要返回一条 busy 的发射槽！
     // 注意 Store 指令需要按序发射
     // Warning: Store instructions must be issued in order!!
-    IssueSlot result;
-    unsigned k = 0;
-	for (k = 0; k < size; k++) {
-		IssueSlot slot = buffer[k];
-		if (slot.busy && !slot.readPort1.waitForWakeup && !slot.readPort2.waitForWakeup) {
-			result = slot;
-			slot.busy = false;
-			break;
+    bool is_LSU = buffer[0].busy && getFUType(buffer[0].inst) == FUType::LSU;
+	if(is_LSU) {
+		bool first_store = false;
+		IssueSlot entry;
+		unsigned k = 0;
+		for (k = 0; k < size; k++) {
+			IssueSlot slot = buffer[k];
+			Instruction inst = slot.inst;
+			bool is_load = inst == RV32I::LB || inst == RV32I::LH || inst == RV32I::LHU || inst == RV32I::LW || inst == RV32I::LBU;
+			if (is_load) {
+				if (slot.busy && !slot.readPort1.waitForWakeup && !slot.readPort2.waitForWakeup) {
+					entry = slot;
+					slot.busy = false;
+					break;
+				}
+			}
+			else {
+				if (first_store == false) {
+					first_store = true;
+					if (slot.busy && !slot.readPort1.waitForWakeup && !slot.readPort2.waitForWakeup) {
+						entry = slot;
+						slot.busy = false;
+						break; 
+					}
+				}
+			}
 		}
+		for (unsigned i = k; i < size - 1; i++) {
+			buffer[i] = buffer[i+1];
+		}
+		// showContent();
+		return entry;
 	}
-
-    std::stringstream ss;
-    ss << result.inst;
-    Logger::setDebugOutput(true);
-    Logger::Debug("[RS::issue] %s", ss.str().c_str());
-    
-    for (unsigned i = k; i < size - 1; i++) {
-        buffer[i] = buffer[i+1];
-    }
-
-    showContent();
-    
-    return result;
+	else {
+		IssueSlot entry;
+		unsigned k = 0;
+		for (k = 0; k < size; k++) {
+			IssueSlot slot = buffer[k];
+			if (slot.busy && !slot.readPort1.waitForWakeup && !slot.readPort2.waitForWakeup) {
+				entry = slot;
+				slot.busy = false;
+				break;
+			}
+		}
+		for (unsigned i = k; i < size - 1; i++) {
+			buffer[i] = buffer[i+1];
+		}
+		// showContent();
+		return entry;
+	}
 }
 
 
@@ -205,7 +260,7 @@ void ReservationStation<size>::showContent() {
 	Logger::setDebugOutput(true);
 	Logger::Debug("Reservation Station: ");
     for (IssueSlot &slot : buffer) {
-        ss << slot.busy << " " << slot.inst << slot.readPort1.robIdx << slot.readPort2.robIdx << slot.readPort1.waitForWakeup << slot.readPort2.waitForWakeup << "\n";
+        ss << slot.busy << " " << slot.inst << " | " << slot.readPort1.waitForWakeup << " "  << slot.readPort2.waitForWakeup << " " << slot.readPort1.robIdx << " " << slot.readPort2.robIdx  << "\n";
     }
 	Logger::Debug("%s", ss.str().c_str());
 }

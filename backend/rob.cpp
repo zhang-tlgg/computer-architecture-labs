@@ -121,7 +121,7 @@ void ReorderBuffer::showContent() {
     unsigned p = popPtr;
     while (p != pushPtr) {
         ROBEntry slot = buffer[p];
-        ss << slot.inst << " " << slot.valid << "\n";
+        ss << p << " " << slot.inst << " " << "\n";
 
         p++;
         if (p == ROB_SIZE)

@@ -84,24 +84,29 @@ std::optional<unsigned> StoreBuffer::query([[maybe_unused]] unsigned addr,
     if (pushPtr == 0) {
         p += ROB_SIZE;
     }
-
-    do
-    {
+    while (p != popPtr) {
         unsigned p_robIdx = buffer[p].robIdx;
-        if(buffer[p].valid &&
+        if(buffer[p].valid && buffer[p].storeAddress == addr &&
             ((p_robIdx < robIdx && p_robIdx >= robPopPtr) || 
             (robIdx < robPopPtr && p_robIdx >= robPopPtr) ||
-            (p_robIdx < robIdx && robIdx < robPopPtr)) &&
-            buffer[p].storeAddress == addr
+            (p_robIdx < robIdx && robIdx < robPopPtr))
+            
         ) {
             return std::make_optional(buffer[p].storeData);
         }
-
         if (p == 0) {
             p += ROB_SIZE;
         }
         p--;
-    } while (p != popPtr - 1);
-    
+    }
+    unsigned p_robIdx = buffer[popPtr].robIdx;
+    if(buffer[p].valid && buffer[p].storeAddress == addr && 
+        ((p_robIdx < robIdx && p_robIdx >= robPopPtr) || 
+        (robIdx < robPopPtr && p_robIdx >= robPopPtr) ||
+        (p_robIdx < robIdx && robIdx < robPopPtr))
+        
+    ) {
+        return std::make_optional(buffer[p].storeData);
+    }
     return std::nullopt;
 }

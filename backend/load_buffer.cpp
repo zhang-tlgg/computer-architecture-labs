@@ -66,13 +66,11 @@ void LoadBuffer::check([[maybe_unused]] unsigned addr,
 
     for (auto &slot : buffer) {
         unsigned load_robIdx = slot.robIdx;
-        // "已经完成推测执行"怎么判断？下面逻辑正确吗？
-        if(
-            (load_robIdx > robIdx && robIdx >= robPopPtr) || 
+        if( slot.valid && 
+            ((load_robIdx > robIdx && robIdx >= robPopPtr) || 
             (load_robIdx < robPopPtr && robIdx >= robPopPtr) ||
-            (load_robIdx > robIdx && load_robIdx < robPopPtr)
+            (load_robIdx > robIdx && load_robIdx < robPopPtr))
         ) {
-            // “将 load buffer 表项设置为 invalid” 是不是指 slot.invalidate
             slot.invalidate = true;
         }
     }

@@ -24,6 +24,7 @@ bool Backend::dispatchInstruction([[maybe_unused]] const Instruction &inst) {
 		Logger::Info("ROB is full");
 		return false;
 	}
+	Logger::setDebugOutput(true);
 	std::stringstream ss;
 	ss << inst;
 	Logger::Debug("[Back::Insert] %s at pc = %x", ss.str().c_str(), inst.pc);
@@ -132,6 +133,7 @@ bool Backend::commitInstruction([[maybe_unused]] const ROBEntry &entry,
     // buffer.
     // NOTE: Be careful about flush!
     // Optional TODO: Update your BTB when necessary
+	Logger::setDebugOutput(true);
 	std::stringstream ss;
     ss << entry.inst;
 	Logger::Debug("[Back::Commit] entry %d: %s.", rob.getPopPtr(), ss.str().c_str());
@@ -142,11 +144,12 @@ bool Backend::commitInstruction([[maybe_unused]] const ROBEntry &entry,
 	}
 
 	if (entry.inst == EXTRA::EXIT){
+		Logger::Debug("Exit");
 		return true;
 	}
 	
 	if (entry.state.mispredict) {
-		Logger::Debug("Ready to jump!");
+		Logger::Debug("jump to %d.", entry.state.jumpTarget);
 		if (entry.inst == RV32I::JAL || entry.inst == RV32I::JALR) {
 			if (!rob.canPop()) {
 				Logger::Error("Can not pop from empty ROB!");
@@ -180,38 +183,32 @@ bool Backend::commitInstruction([[maybe_unused]] const ROBEntry &entry,
 		case FUType::LSU:
 		{	
 		 	if (entry.inst == RV32I::LB || entry.inst == RV32I::LH || entry.inst == RV32I::LHU || 
-				entry.inst == RV32I::LW || entry.inst == RV32I::LBU) { // Load 
-
+				entry.inst == RV32I::LW || entry.inst == RV32I::LBU) { 
+				// Load 
                 LoadBufferSlot ldSlot = loadBuffer.pop(rob.getPopPtr());
-				if (ldSlot.invalidate) {
-					unsigned rd = entry.inst.getRd();
-					Logger::Debug("invalidate: Reg[%d] := %d = 0x%x", rd, entry.state.result, entry.state.result);
-
-                    // Instruction inst = entry.inst;
-                    // rob.pop();
-					// // 是这样吗？
-                    // dispatchInstruction(inst);
+                if (ldSlot.invalidate) {
+					Logger::Debug("load invalidate: jump to %x", entry.inst.pc);
+					frontend.jump(entry.inst.pc);
+					flush();
                 }
-				unsigned rd = entry.inst.getRd();
-				regFile->write(rd, entry.state.result, rob.getPopPtr());
-				Logger::Debug("Reg[%d] := %d = 0x%x", rd, entry.state.result, entry.state.result);
-				rob.pop();
+                else {
+                    unsigned rd = entry.inst.getRd();
+                    regFile->write(rd, entry.state.result, rob.getPopPtr());
+                    rob.pop();
+					Logger::Debug("Reg[%d] := %d = 0x%x", rd, entry.state.result, entry.state.result);
+                }
 			}
-			else if (entry.inst == RV32I::SB || entry.inst == RV32I::SH || entry.inst == RV32I::SW) { // Store
-				StoreBufferSlot stSlot = storeBuffer.front();
-				bool status =
-					writeMemoryHierarchy(stSlot.storeAddress, stSlot.storeData, 0xF);
-				if (!status) {
-					return false;
-				} else {
-					storeBuffer.pop();
-				}
+			else if (entry.inst == RV32I::SB || entry.inst == RV32I::SH || entry.inst == RV32I::SW) { 
+				// Store
+                StoreBufferSlot stSlot = storeBuffer.front();
 				Logger::Debug("Mem[%x] := %d", stSlot.storeAddress, stSlot.storeData);
-			}
-			else {
-				Logger::Error("Committing unknown instruction! FUType = LSU, InstType != Load/Store.");
-				std::__throw_runtime_error(
-					"Committing unknown instruction!");
+                bool status = writeMemoryHierarchy(stSlot.storeAddress, stSlot.storeData, 0xF);
+                if (!status) {
+                    return false;
+                } else {
+                    storeBuffer.pop();
+					rob.pop();
+                }
 			}
 			break;
 		}	
