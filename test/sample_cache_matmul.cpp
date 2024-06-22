@@ -15,8 +15,8 @@ int main(int argc, char **argv) {
         }
     }
 
-    constexpr size_t BLOCK_SIZE = 16;
-    for (size_t blk = 0; blk < MATRIX_SIZE / BLOCK_SIZE; ++blk) {
+    int BLOCK_SIZE = 16;
+    for (int blk = 0; blk < MATRIX_SIZE / BLOCK_SIZE; ++blk) {
         for (int i = 0; i < MATRIX_SIZE; i ++) {
             for (int k = blk * BLOCK_SIZE; k < (blk + 1) * BLOCK_SIZE; k ++) {
                 register int tmp = A[i][k];
