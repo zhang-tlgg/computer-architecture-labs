@@ -2,7 +2,12 @@
 #include "processor.h"
 #include "runner.h"
 
-unsigned MeasureCacheSize(ProcessorAbstract *p) {
+/*
+基本思路：从内存中连续读取数组中不同大小的数据，观察平均读取速度。
+当数组大小超过数据缓存之后，会出现 L1 DCache 的读缺失，平均读取速度会增加。
+*/
+
+unsigned MeasureCacheSize([[maybe_unused]] ProcessorAbstract *p) {
 
     // TODO: Measure the size of the cache in the given processor
     // The size will be ranged from 512 bytes to 4096 bytes(or 4 KB), and must be a power of 2
