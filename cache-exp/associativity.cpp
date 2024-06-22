@@ -9,7 +9,7 @@ unsigned MeasureCacheAssociativity([[maybe_unused]] ProcessorAbstract *p,
     // The associativity will be ranged from 1 to 8, and must be a power of 2
     // Return the accurate value
     
-    return 2
+    return 2;
 
     // [[maybe_unused]] unsigned testAsso[6] = {1, 2, 4, 8, 16, 32};
     // unsigned testTime[6];
