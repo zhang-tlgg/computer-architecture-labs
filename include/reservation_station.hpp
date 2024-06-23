@@ -53,49 +53,46 @@ void ReservationStation<size>::insertInstruction(
         // 2.插入时，设置两个寄存器读取端口是否已经唤醒，以及对应值，必要时从 ROB 中读取。
         // 3.寄存器设置 busy
         // 4.slot busy，返回
-		Logger::setDebugOutput(false);
-        std::stringstream ss;
-		ss << inst;
-		slot.inst = inst;
+
     	slot.busy = true;
+		slot.inst = inst;
     	slot.robIdx = robIdx;
-		Logger::Debug("[RS::Insert] %s, robIdx = %d", ss.str().c_str(), robIdx);
 		unsigned rs1 = inst.getRs1();
 		unsigned robIdx1 = regFile->getBusyIndex(rs1);
 		if (regFile->isBusy(rs1)) {
 			if (reorderBuffer.checkReady(robIdx1)) {
-				slot.readPort1.waitForWakeup = false;
 				slot.readPort1.robIdx = 0;
+				slot.readPort1.waitForWakeup = false;
 				slot.readPort1.value = reorderBuffer.read(robIdx1);
 			}
 			else {
-				slot.readPort1.waitForWakeup = true;
 				slot.readPort1.robIdx = robIdx1;
+				slot.readPort1.waitForWakeup = true;
 				slot.readPort1.value = 0;
 			}		
 		}
 		else {
-			slot.readPort1.waitForWakeup = false;
 			slot.readPort1.robIdx = 0;
+			slot.readPort1.waitForWakeup = false;
 			slot.readPort1.value = regFile->read(rs1);
 		}
 		unsigned rs2 = inst.getRs2();
 		unsigned robIdx2 = regFile->getBusyIndex(rs2);
 		if (regFile->isBusy(rs2)) {
 			if (reorderBuffer.checkReady(robIdx2)) {
-				slot.readPort2.waitForWakeup = false;
 				slot.readPort2.robIdx = 0;
+				slot.readPort2.waitForWakeup = false;
 				slot.readPort2.value = reorderBuffer.read(robIdx2);
 			}
 			else {
-				slot.readPort2.waitForWakeup = true;
 				slot.readPort2.robIdx = robIdx2;
+				slot.readPort2.waitForWakeup = true;
 				slot.readPort2.value = 0;
 			}
 		}
 		else {
-			slot.readPort2.waitForWakeup = false;
 			slot.readPort2.robIdx = 0;
+			slot.readPort2.waitForWakeup = false;
 			slot.readPort2.value = regFile->read(rs2);
 		}
 		return;
@@ -108,24 +105,18 @@ void ReservationStation<size>::wakeup(
     // TODO: Wakeup instructions according to ROB Write
     // 1.查看每个 slot 的寄存器读取端口是否已经唤醒
     // 2.如果未唤醒，比对信息，尝试唤醒指令
-	Logger::setDebugOutput(false);
-    std::stringstream ss;
-    Logger::Info("wake up from robIdx = %s", x.robIdx);
+
 	for (auto &slot : buffer) {
 		if (slot.busy) {
 			if (slot.readPort1.waitForWakeup 
 			 && x.robIdx == slot.readPort1.robIdx) {
 				slot.readPort1.value = x.result;
 				slot.readPort1.waitForWakeup = false;
-				ss << slot.inst;
-				Logger::Debug("RS wake up rs1 of %s", ss.str().c_str());
 			}
 			if (slot.readPort2.waitForWakeup 
 			 && x.robIdx == slot.readPort2.robIdx) {
 				slot.readPort2.value = x.result;
 				slot.readPort2.waitForWakeup = false;
-				ss << slot.inst;
-				Logger::Debug("RS wake up rs2 of %s", ss.str().c_str());
 			}
 		}
 	}
