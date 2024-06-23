@@ -29,79 +29,53 @@ bool Backend::dispatchInstruction([[maybe_unused]] const Instruction &inst) {
 		Logger::Debug("ROB can not push.");
 		return false;
 	}
-	switch (getFUType(inst))
-	{
-	case FUType::ALU: {
-		if (!rsALU.hasEmptySlot()) {
-			Logger::Debug("rsALU is full.");
-			// rsALU.showContent();
+
+	FUType ftype = getFUType(inst);
+	if (ftype == FUType::ALU) {
+		if (!rsALU.hasEmptySlot())
 			return false;
-		}
 		unsigned int robIdx = rob.push(inst, false);
 		rsALU.insertInstruction(inst, robIdx, regFile, rob);
 		regFile->markBusy(inst.getRd(), robIdx);
-		rob.showContent();
 		return true;
 	}
-	case FUType::BRU: {
-		if (!rsBRU.hasEmptySlot()) {
-			Logger::Debug("rsBRU is full.");
+	if (ftype == FUType::BRU) {
+		if (!rsBRU.hasEmptySlot()) 
 			return false;
-		}
 		unsigned int robIdx = rob.push(inst, false);
 		rsBRU.insertInstruction(inst, robIdx, regFile, rob);
 		regFile->markBusy(inst.getRd(), robIdx);
-		rob.showContent();
 		return true;
 	}
-	case FUType::DIV: {
-		if (!rsDIV.hasEmptySlot()) {
-			Logger::Debug("rsDIV is full.");
+	if (ftype == FUType::DIV) {
+		if (!rsDIV.hasEmptySlot()) 
 			return false;
-		}
 		unsigned int robIdx = rob.push(inst, false);
 		rsDIV.insertInstruction(inst, robIdx, regFile, rob);
 		regFile->markBusy(inst.getRd(), robIdx);
-		rob.showContent();
 		return true;
 	}
-	case FUType::MUL: {
-		if (!rsMUL.hasEmptySlot()) return false;
+	if (ftype == FUType::MUL) {
+		if (!rsMUL.hasEmptySlot()) 
+			return false;
 		unsigned int robIdx = rob.push(inst, false);
 		rsMUL.insertInstruction(inst, robIdx, regFile, rob);
 		regFile->markBusy(inst.getRd(), robIdx);
-		rob.showContent();
 		return true;
 	}
-	case FUType::LSU: {
-		if (!rsLSU.hasEmptySlot()) {
-			Logger::Debug("rsLSU is full.");
-			// rsLSU.showContent();
+	if (ftype == FUType::LSU) {
+		if (!rsLSU.hasEmptySlot())
 			return false;
-		}
 		unsigned int robIdx = rob.push(inst, false);
 		rsLSU.insertInstruction(inst, robIdx, regFile, rob);
 		regFile->markBusy(inst.getRd(), robIdx);
-		rob.showContent();
 		return true;
 	}
-	case FUType::NONE: {
+	if (ftype == FUType::NONE) {
 		unsigned int robIdx = rob.push(inst, true);
 		regFile->markBusy(inst.getRd(), robIdx);
-		rob.showContent();
 		return true;
 	}
-	
-	default: {
-		Logger::Error("Unknown FUType for instruction!");
-		std::__throw_runtime_error("Unknown FUType for instruction!");
-		return false;
-		break;
-	}
-	}
-
-    Logger::Error("Instruction dispatch not implemented!");
-    std::__throw_runtime_error("Instruction dispatch not implemented!");
     
     return false;
 }
@@ -135,11 +109,6 @@ bool Backend::commitInstruction([[maybe_unused]] const ROBEntry &entry,
 	// Logger::Debug("[Back::Commit] entry %d: %s.", rob.getPopPtr(), ss.str().c_str());
 	// Logger::Debug("%x  %s", entry.inst.pc, ss.str().c_str());
 
-	if (!entry.state.ready) {
-		Logger::Error("Can not commit unready instruction");
-    	std::__throw_runtime_error("Can not commit unready instruction");
-	}
-
 	if (entry.inst == EXTRA::EXIT){
 		Logger::Debug("Exit");
 		Logger::Info("Exit");
@@ -149,11 +118,6 @@ bool Backend::commitInstruction([[maybe_unused]] const ROBEntry &entry,
 	if (entry.state.mispredict) {
 		// Logger::Debug("Jump to %x.", entry.state.jumpTarget);
 		if (entry.inst == RV32I::JAL || entry.inst == RV32I::JALR) {
-			if (!rob.canPop()) {
-				Logger::Error("Can not pop from empty ROB!");
-				std::__throw_runtime_error(
-				    "Can not pop from empty ROB!");
-			}
 			regFile->write(entry.inst.getRd(), entry.state.result, rob.getPopPtr());
 			// Logger::Debug("Return addr = %x, Param a0 = %d", regFile->read(1), regFile->read(10));
 		}
@@ -164,23 +128,29 @@ bool Backend::commitInstruction([[maybe_unused]] const ROBEntry &entry,
 	}
 
 	if (rob.canPop()) {
-		switch (getFUType(entry.inst))
-		{
-		case FUType::ALU:
-		case FUType::DIV:
-		case FUType::MUL:
-		case FUType::BRU:
+		FUType ftype = getFUType(inst);
+		if (ftype == FUType::ALU || ftype == FUType::DIV || ftype == FUType::MUL || ftype == FUType::BRU)
 		{	
 			unsigned rd = entry.inst.getRd();
 			regFile->write(rd, entry.state.result, rob.getPopPtr());
 			rob.pop();
-			// if (entry.inst.type != InstructionType::B)
-			// 	Logger::Debug("Reg[%d] := %u = 0x%x", rd, entry.state.result, entry.state.result);
-			break;
 		}
-		case FUType::LSU:
+		else if (ftype == FUType::LSU)
 		{	
-		 	if (entry.inst == RV32I::LB || entry.inst == RV32I::LH || entry.inst == RV32I::LHU || 
+			if (entry.inst == RV32I::SB || entry.inst == RV32I::SH || entry.inst == RV32I::SW) { 
+				// Store
+                StoreBufferSlot stSlot = storeBuffer.front();
+                bool status = writeMemoryHierarchy(stSlot.storeAddress, stSlot.storeData, 0xF);
+                if (!status) {
+                    return false;
+                } else {
+					if (stSlot.storeAddress >= 0x80400000 && stSlot.storeAddress <= 0x804001a8){
+					}
+                    storeBuffer.pop();
+					rob.pop();
+                }
+			}
+			else if (entry.inst == RV32I::LB || entry.inst == RV32I::LH || entry.inst == RV32I::LHU || 
 				entry.inst == RV32I::LW || entry.inst == RV32I::LBU) { 
 				// Load 
                 LoadBufferSlot ldSlot = loadBuffer.pop(rob.getPopPtr());
@@ -193,54 +163,15 @@ bool Backend::commitInstruction([[maybe_unused]] const ROBEntry &entry,
                     unsigned rd = entry.inst.getRd();
                     regFile->write(rd, entry.state.result, rob.getPopPtr());
                     rob.pop();
-					// Logger::Debug("Reg[%d] := %u = 0x%x", rd, entry.state.result, entry.state.result);
                 }
 			}
-			else if (entry.inst == RV32I::SB || entry.inst == RV32I::SH || entry.inst == RV32I::SW) { 
-				// Store
-                StoreBufferSlot stSlot = storeBuffer.front();
-                bool status = writeMemoryHierarchy(stSlot.storeAddress, stSlot.storeData, 0xF);
-                if (!status) {
-                    return false;
-                } else {
-					if (stSlot.storeAddress >= 0x80400000 && stSlot.storeAddress <= 0x804001a8){
-						Logger::Debug("Mem[%x] := %u", stSlot.storeAddress, stSlot.storeData);
-						// for (int i = 0; i <256; i++){
-						// 	memory
-						// 	stSlot.storeAddress - 0x80400000u
-						// }
-					}
-                    storeBuffer.pop();
-					rob.pop();
-                }
-			}
-			break;
-		}	
-		case FUType::NONE:
+		}
+		else if(ftype == FUType::NONE)
 		{
 			if (entry.inst == EXTRA::EXIT){
 				return true;
 			}
-			else {
-				Logger::Error("Committing unknown instruction! FUType = NONE, InstType != Exit.");
-				std::__throw_runtime_error(
-					"Committing unknown instruction!");
-			}
 		}
-		default:
-		{
-			Logger::Error("Committing unknown instruction! FUType unknown.");
-			std::__throw_runtime_error(
-				"Committing unknown instruction!");
-			break;
-		}
-		}
-		// rob.showContent();
 		return false;
-	}
-	else {
-		Logger::Error("Can not commit instruction when ROB is empty!");
-		std::__throw_runtime_error(
-		    "Can not commit instruction when ROB is empty!");
 	}
 }
