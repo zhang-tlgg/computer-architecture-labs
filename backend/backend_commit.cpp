@@ -20,13 +20,8 @@ bool Backend::dispatchInstruction([[maybe_unused]] const Instruction &inst) {
 	// 6.插入成功返回 true, 失败返回 false, 请保证返回 false 时没有副作用
     // NOTE: use getFUType to get instruction's target FU
     // NOTE: FUType::NONE only goes into ROB but not Reservation Stations
-	Logger::setDebugOutput(false);
-	std::stringstream ss;
-	ss << inst;
-	Logger::Debug("[Back::Dispatch] %s at pc = %x", ss.str().c_str(), inst.pc);
 	
 	if (!rob.canPush()) {
-		Logger::Debug("ROB can not push.");
 		return false;
 	}
 
@@ -103,15 +98,8 @@ bool Backend::commitInstruction([[maybe_unused]] const ROBEntry &entry,
     // buffer.
     // NOTE: Be careful about flush!
     // Optional TODO: Update your BTB when necessary
-	Logger::setDebugOutput(false);
-	std::stringstream ss;
-    ss << entry.inst;
-	// Logger::Debug("[Back::Commit] entry %d: %s.", rob.getPopPtr(), ss.str().c_str());
-	// Logger::Debug("%x  %s", entry.inst.pc, ss.str().c_str());
 
 	if (entry.inst == EXTRA::EXIT){
-		Logger::Debug("Exit");
-		Logger::Info("Exit");
 		return true;
 	}
 	
@@ -119,7 +107,6 @@ bool Backend::commitInstruction([[maybe_unused]] const ROBEntry &entry,
 		// Logger::Debug("Jump to %x.", entry.state.jumpTarget);
 		if (entry.inst == RV32I::JAL || entry.inst == RV32I::JALR) {
 			regFile->write(entry.inst.getRd(), entry.state.result, rob.getPopPtr());
-			// Logger::Debug("Return addr = %x, Param a0 = %d", regFile->read(1), regFile->read(10));
 		}
 		frontend.jump(entry.state.jumpTarget);
 		flush();

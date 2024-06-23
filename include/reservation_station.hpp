@@ -120,7 +120,6 @@ void ReservationStation<size>::wakeup(
 			}
 		}
 	}
-
 }
 
 template <unsigned size>
