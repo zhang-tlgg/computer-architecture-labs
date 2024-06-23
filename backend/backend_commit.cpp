@@ -128,7 +128,7 @@ bool Backend::commitInstruction([[maybe_unused]] const ROBEntry &entry,
 	}
 
 	if (rob.canPop()) {
-		FUType ftype = getFUType(inst);
+		FUType ftype = getFUType(entry.inst);
 		if (ftype == FUType::ALU || ftype == FUType::DIV || ftype == FUType::MUL || ftype == FUType::BRU)
 		{	
 			unsigned rd = entry.inst.getRd();
@@ -172,6 +172,6 @@ bool Backend::commitInstruction([[maybe_unused]] const ROBEntry &entry,
 				return true;
 			}
 		}
-		return false;
 	}
+	return false;
 }
