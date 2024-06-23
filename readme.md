@@ -1,3 +1,9 @@
+2024 THU 计算机系统结构实验作业：Tomasulo + Cache
+
+都只完成了必做部分，在各自分支之下。
+
+---
+
 # Tomasulo 模拟器
 
 2024 计算机系统结构 Tomasulo 模拟器实验框架
@@ -37,12 +43,13 @@
 实验之前，需要准备好如下工具：
 
 1. cmake，g++: cmake 最低版本为 3.15，g++ 最低版本为 9.0.0
+
 2. riscv 工具链：riscv-gnu-linux- 工具链。推荐使用 linux 环境，工具链可以通过 apt 直接安装。
-    
-    ```bash
-    sudo apt install gcc-riscv64-unknown-elf # 注意是 gcc
-    sudo apt install g++-riscv64-linux-gnu   # 选一个安装就行
-    ```
+   
+   ```bash
+   sudo apt install gcc-riscv64-unknown-elf # 注意是 gcc
+   sudo apt install g++-riscv64-linux-gnu   # 选一个安装就行
+   ```
 
 ## 使用方法
 
