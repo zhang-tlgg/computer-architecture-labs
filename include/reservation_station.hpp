@@ -24,7 +24,6 @@ public:
     [[nodiscard]] bool canIssue() const;
     IssueSlot issue();
     void flush();
-	void showContent();
 };
 
 template <unsigned size>
@@ -58,8 +57,8 @@ void ReservationStation<size>::insertInstruction(
         std::stringstream ss;
 		ss << inst;
 		slot.inst = inst;
-    	slot.robIdx = robIdx;
     	slot.busy = true;
+    	slot.robIdx = robIdx;
 		Logger::Debug("[RS::Insert] %s, robIdx = %d", ss.str().c_str(), robIdx);
 		unsigned rs1 = inst.getRs1();
 		unsigned robIdx1 = regFile->getBusyIndex(rs1);
@@ -74,14 +73,11 @@ void ReservationStation<size>::insertInstruction(
 				slot.readPort1.robIdx = robIdx1;
 				slot.readPort1.value = 0;
 			}		
-			// Logger::Debug("slot.readPort1.robIdx = %d", slot.readPort1.robIdx );
-			// Logger::Debug("ROB[slot.readPort1.robIdx].ready = %d", reorderBuffer.checkReady(slot.readPort1.robIdx));
 		}
 		else {
 			slot.readPort1.waitForWakeup = false;
 			slot.readPort1.robIdx = 0;
 			slot.readPort1.value = regFile->read(rs1);
-			// regFile->markBusy(rs1);
 		}
 		unsigned rs2 = inst.getRs2();
 		unsigned robIdx2 = regFile->getBusyIndex(rs2);
@@ -101,18 +97,9 @@ void ReservationStation<size>::insertInstruction(
 			slot.readPort2.waitForWakeup = false;
 			slot.readPort2.robIdx = 0;
 			slot.readPort2.value = regFile->read(rs2);
-			// regFile->markBusy(rs2);
 		}
-        // showContent();
 		return;
-        Logger::Error("Dispatching instruction is not implemented");
-        std::__throw_runtime_error(
-            "Dispatching instruction is not implemented");
     }
-    Logger::Error("ReservationStation::insertInstruction no empty slots!");
-    std::__throw_runtime_error(
-        "No empty slots when inserting instruction into reservation "
-        "station.");
 }
 
 template <unsigned size>
@@ -124,7 +111,6 @@ void ReservationStation<size>::wakeup(
 	Logger::setDebugOutput(false);
     std::stringstream ss;
     Logger::Info("wake up from robIdx = %s", x.robIdx);
-	bool flag = false;
 	for (auto &slot : buffer) {
 		if (slot.busy) {
 			if (slot.readPort1.waitForWakeup 
@@ -133,7 +119,6 @@ void ReservationStation<size>::wakeup(
 				slot.readPort1.waitForWakeup = false;
 				ss << slot.inst;
 				Logger::Debug("RS wake up rs1 of %s", ss.str().c_str());
-				flag = true;
 			}
 			if (slot.readPort2.waitForWakeup 
 			 && x.robIdx == slot.readPort2.robIdx) {
@@ -141,12 +126,9 @@ void ReservationStation<size>::wakeup(
 				slot.readPort2.waitForWakeup = false;
 				ss << slot.inst;
 				Logger::Debug("RS wake up rs2 of %s", ss.str().c_str());
-				flag = true;
 			}
 		}
 	}
-    if (flag)
-        showContent();
 
 }
 
@@ -226,12 +208,6 @@ IssueSlot ReservationStation<size>::issue() {
 		}
 		buffer[size - 1] = entry;
 		buffer[size - 1].busy = false;
-
-		// Logger::setDebugOutput(true);
-		// std::stringstream ss;
-		// ss << entry.inst;
-		// Logger::Debug("[RS::Issue] %s", ss.str().c_str());
-		// showContent();
 		return entry;
 	}
 	else {
@@ -250,30 +226,13 @@ IssueSlot ReservationStation<size>::issue() {
 		}
 		buffer[size - 1] = entry;
 		buffer[size - 1].busy = false;
-		
-		// Logger::setDebugOutput(true);
-		// std::stringstream ss;
-		// ss << entry.inst;
-		// Logger::Debug("[RS::Issue] %s", ss.str().c_str());
-		// showContent();
 		return entry;
 	}
 }
-
 
 template <unsigned size>
 void ReservationStation<size>::flush() {
     for (auto &slot : buffer) {
         slot.busy = false;
     }
-}
-
-template <unsigned size>
-void ReservationStation<size>::showContent() {
-	std::stringstream ss;
-	// Logger::setDebugOutput(true);
-    for (IssueSlot &slot : buffer) {
-        ss << slot.busy << " " << slot.inst << " | " << slot.readPort1.waitForWakeup << " "  << slot.readPort2.waitForWakeup << " " << slot.readPort1.robIdx << " " << slot.readPort2.robIdx  << "\n";
-    }
-	Logger::Debug("Reservation Station: \n%s", ss.str().c_str());
 }
